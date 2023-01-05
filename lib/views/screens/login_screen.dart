@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config.dart';
+import 'catalogue_screen.dart';
 import 'home_screen.dart';
 import 'registration_screen.dart';
 import '../../models/user.dart';
@@ -180,8 +181,10 @@ class _LoginScreenState extends State<LoginScreen> {
             gravity: ToastGravity.BOTTOM,
             timeInSecForIosWeb: 1,
             fontSize: 14.0);
-        Navigator.push(context,
-            MaterialPageRoute(builder: (content) => HomeScreen(user: user)));
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (content) => CatalogueScreen(user: user)));
       } else {
         Fluttertoast.showToast(
             msg: "Login Failed",

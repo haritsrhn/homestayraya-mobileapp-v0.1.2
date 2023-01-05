@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:ndialog/ndialog.dart';
 import '../../config.dart';
 import '../../models/user.dart';
 import '/views/screens/registration_screen.dart';
@@ -12,20 +13,20 @@ import 'newhomestay_screen.dart';
 import '../../models/homestay.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-class BookingScreen extends StatefulWidget {
+class CatalogueScreen extends StatefulWidget {
   final User user;
-  const BookingScreen({super.key, required this.user});
+  const CatalogueScreen({super.key, required this.user});
 
   @override
-  State<BookingScreen> createState() => _BookingScreenState();
+  State<CatalogueScreen> createState() => _CatalogueScreenState();
 }
 
-class _BookingScreenState extends State<BookingScreen> {
+class _CatalogueScreenState extends State<CatalogueScreen> {
   late Position _position;
   List<Homestays> homestayList = <Homestays>[];
   String titlecenter = "Loading...";
   late double screenHeight, screenWidth, resWidth;
-  int rowcount = 2;
+  int rowCount = 2;
 
   @override
   void dispose() {
@@ -45,16 +46,16 @@ class _BookingScreenState extends State<BookingScreen> {
     screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth <= 600) {
       resWidth = screenWidth;
-      rowcount = 2;
+      rowCount = 2;
     } else {
       resWidth = screenWidth * 0.75;
-      rowcount = 3;
+      rowCount = 3;
     }
     return WillPopScope(
       onWillPop: () async => false,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Booking'),
+          title: const Text('Catalogue'),
           actions: [
             IconButton(
                 onPressed: _registrationForm,
@@ -106,15 +107,17 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                   Expanded(
                     child: GridView.count(
-                      crossAxisCount: rowcount,
+                      crossAxisCount: rowCount,
                       children: List.generate(homestayList.length, (index) {
                         return Card(
                           elevation: 8,
                           child: InkWell(
-                            // onTap: () {
-                            // _showDetails(index);
-                            // },
-
+                            onTap: () {
+                              // show details
+                            },
+                            onLongPress: () {
+                              // delete
+                            },
                             child: Column(children: [
                               const SizedBox(
                                 height: 8,
@@ -125,7 +128,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                   width: resWidth / 2,
                                   fit: BoxFit.cover,
                                   imageUrl:
-                                      "${Config.server}assets/homestay_image/${homestayList[index].userId}.png",
+                                      "${Config.server}/assets/homestay_image/${homestayList[index].hsId}-1.png",
                                   placeholder: (context, url) =>
                                       const LinearProgressIndicator(),
                                   errorWidget: (context, url, error) =>
@@ -145,7 +148,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   .toString(),
                                               15),
                                           style: const TextStyle(
-                                              fontSize: 16,
+                                              //fontSize: 12,
                                               fontWeight: FontWeight.bold),
                                         ),
                                         Text(
@@ -177,6 +180,13 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _goToNewHomestay() async {
+    ProgressDialog progressDialog = ProgressDialog(
+      context,
+      blur: 10,
+      message: const Text("Searching your current location"),
+      title: null,
+    );
+    progressDialog.show();
     if (widget.user.id == "0") {
       Fluttertoast.showToast(
           msg: "Please login/register to add new homestay",
@@ -184,14 +194,17 @@ class _BookingScreenState extends State<BookingScreen> {
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 1,
           fontSize: 14.0);
+      progressDialog.dismiss();
       return;
     }
     if (await _checkPermissionGetLoc()) {
-      Navigator.push(
+      progressDialog.dismiss();
+      await Navigator.push(
           context,
           MaterialPageRoute(
               builder: (content) =>
                   NewHomestayScreen(user: widget.user, position: _position)));
+      _loadHomestay();
     } else {
       Fluttertoast.showToast(
           msg: "Please allow the app to access the location",
@@ -199,6 +212,7 @@ class _BookingScreenState extends State<BookingScreen> {
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 1,
           fontSize: 14.0);
+      progressDialog.dismiss();
     }
   }
 
@@ -239,15 +253,6 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _loadHomestay() {
-    if (widget.user.id == "0") {
-      Fluttertoast.showToast(
-          msg: "Please login/register to add new homestay",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          fontSize: 14.0);
-      return;
-    }
     http
         .get(
       Uri.parse(

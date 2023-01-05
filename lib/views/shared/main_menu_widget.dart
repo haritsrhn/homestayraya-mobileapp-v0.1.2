@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/user.dart';
 import '../screens/home_screen.dart';
-import '../screens/booking_screen.dart';
+import '../screens/catalogue_screen.dart';
 import '/views/screens/profile_screen.dart';
 
 class MainMenuWidget extends StatefulWidget {
@@ -48,13 +48,14 @@ class _MainMenuWidgetState extends State<MainMenuWidget> {
             },
           ),
           ListTile(
-            title: const Text("Booking"),
+            title: const Text("Catalogue"),
             onTap: () {
               Navigator.pop(context);
               Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (content) => BookingScreen(user: widget.user)));
+                      builder: (content) =>
+                          CatalogueScreen(user: widget.user)));
             },
           ),
         ],

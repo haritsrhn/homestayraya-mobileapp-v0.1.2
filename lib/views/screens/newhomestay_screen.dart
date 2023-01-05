@@ -9,6 +9,7 @@ import 'package:geocoding/geocoding.dart';
 import '../../config.dart';
 import '../../models/user.dart';
 import 'package:http/http.dart' as http;
+import 'package:sn_progress_dialog/sn_progress_dialog.dart';
 
 class NewHomestayScreen extends StatefulWidget {
   final User user;
@@ -30,6 +31,7 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
   }
 
   File? _image;
+  List<File> imageList = [];
   var pathAsset = "assets/images/camera.png";
   final TextEditingController _hsnameEditingController =
           TextEditingController(),
@@ -40,6 +42,7 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
       _hsaddressEditingController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   var _lat, _lng;
+  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -47,20 +50,25 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
       appBar: AppBar(title: const Text("Add New Homestay")),
       body: SingleChildScrollView(
           child: Column(children: [
-        GestureDetector(
-          onTap: _selectImageDialog,
-          child: Card(
-            elevation: 8,
-            child: Container(
-                height: 150,
-                width: 300,
-                decoration: BoxDecoration(
-                    image: DecorationImage(
-                  image: _image == null
-                      ? AssetImage(pathAsset)
-                      : FileImage(_image!) as ImageProvider,
-                  fit: BoxFit.scaleDown,
-                ))),
+        const SizedBox(
+          height: 16,
+        ),
+        Center(
+          child: SizedBox(
+            height: 200,
+            child: PageView.builder(
+                itemCount: 3,
+                controller: PageController(viewportFraction: 0.7),
+                onPageChanged: (int index) => setState(() => _index = index),
+                itemBuilder: (BuildContext context, int index) {
+                  if (index == 0) {
+                    return Image1();
+                  } else if (index == 1) {
+                    return Image2();
+                  } else {
+                    return Image3();
+                  }
+                }),
           ),
         ),
         const SizedBox(height: 16),
@@ -191,10 +199,10 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
     );
   }
 
-  _newHomestayDialog() {
-    if (_image == null) {
+  void _newHomestayDialog() {
+    if (imageList.length < 2) {
       Fluttertoast.showToast(
-          msg: "Please insert a picture of your homestay",
+          msg: "Please insert at least 3 pictures",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 1,
@@ -220,16 +228,16 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
             content: const Text("Are you sure you want to add this homestay?"),
             actions: <Widget>[
               TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text("Cancel")),
-              TextButton(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.of(context).pop();
                     _addHomestay();
                   },
                   child: const Text("Add")),
+              TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("Cancel")),
             ],
           );
         });
@@ -289,7 +297,6 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
     if (pickedFile != null) {
       _image = File(pickedFile.path);
       _cropImage();
-      setState(() {});
     } else {
       print('No image selected.');
     }
@@ -306,7 +313,6 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
     if (pickedFile != null) {
       _image = File(pickedFile.path);
       _cropImage();
-      setState(() {});
     } else {
       print('No image selected.');
     }
@@ -321,8 +327,9 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
       uiSettings: [
         AndroidUiSettings(
             toolbarTitle: 'Cropper',
-            toolbarColor: Colors.deepOrange,
+            toolbarColor: Colors.brown,
             toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: false),
         IOSUiSettings(
           title: 'Crop Image',
@@ -332,6 +339,7 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
     if (croppedFile != null) {
       File imageFile = File(croppedFile.path);
       _image = imageFile;
+      imageList.add(_image!);
       setState(() {});
     }
   }
@@ -347,13 +355,18 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
   }
 
   void _addHomestay() {
+    ProgressDialog pd = ProgressDialog(context: context);
+    pd.show(msg: 'Uploading..', max: 100);
+
     String hsname = _hsnameEditingController.text.toString();
     String hsdesc = _hsdescEditingController.text.toString();
     String hsprice = _hspriceEditingController.text.toString();
     String hsaddress = _hsaddressEditingController.text.toString();
     String hsstate = _hsstateEditingController.text.toString();
     String hslocal = _hslocalEditingController.text.toString();
-    String base64Image = base64Encode(_image!.readAsBytesSync());
+    String base64Image1 = base64Encode(imageList[0].readAsBytesSync());
+    String base64Image2 = base64Encode(imageList[1].readAsBytesSync());
+    String base64Image3 = base64Encode(imageList[2].readAsBytesSync());
 
     http.post(Uri.parse("${Config.server}/php/insert_homestay.php"), body: {
       "userid": widget.user.id,
@@ -365,7 +378,9 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
       "loc": hslocal,
       "lat": _lat,
       "lng": _lng,
-      "image": base64Image,
+      "image1": base64Image1,
+      "image2": base64Image2,
+      "image3": base64Image3,
     }).then((response) {
       var data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == "success") {
@@ -375,8 +390,9 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
             gravity: ToastGravity.BOTTOM,
             timeInSecForIosWeb: 1,
             fontSize: 14.0);
+        pd.update(value: 100, msg: "Completed");
+        pd.close();
         Navigator.of(context).pop();
-        return;
       } else {
         Fluttertoast.showToast(
             msg: "Failed",
@@ -384,44 +400,81 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
             gravity: ToastGravity.BOTTOM,
             timeInSecForIosWeb: 1,
             fontSize: 14.0);
-        return;
+        pd.update(value: 0, msg: "Failed");
+        pd.close();
       }
     });
   }
 
-  /*void _checkPermissionGetLoc() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return Future.error('Location services are disabled.');
-    }
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return Future.error('Location permissions are denied');
-      }
-    }
-    if (permission == LocationPermission.deniedForever) {
-      return Future.error('Location permissions are permanently denied.');
-    }
-    _position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
-    print(_position.latitude);
-    print(_position.longitude);
-    _getAddress(_position);
+  Widget Image1() {
+    return Transform.scale(
+      scale: 1,
+      child: Card(
+          elevation: 6,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: GestureDetector(
+            onTap: _selectImageDialog,
+            child: Container(
+              height: 200,
+              width: 200,
+              decoration: BoxDecoration(
+                  image: DecorationImage(
+                image: imageList.length > 0
+                    ? FileImage(imageList[0]) as ImageProvider
+                    : AssetImage(pathAsset),
+                fit: BoxFit.cover,
+              )),
+            ),
+          )),
+    );
   }
 
-  _getAddress(Position pos) async {
-    List<Placemark> placemarks =
-        await placemarkFromCoordinates(pos.latitude, pos.longitude);
-    setState(() {
-      _prstateEditingController.text =
-          placemarks[0].administrativeArea.toString();
-      _prlocalEditingController.text = placemarks[0].locality.toString();
-      //prlat = _position.latitude.toString();
-      //prlong = _position.longitude.toString();
-    });
-  }*/
+  Widget Image2() {
+    return Transform.scale(
+      scale: 1,
+      child: Card(
+          elevation: 6,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: GestureDetector(
+            onTap: _selectImageDialog,
+            child: Container(
+              height: 200,
+              width: 200,
+              decoration: BoxDecoration(
+                  image: DecorationImage(
+                image: imageList.length > 1
+                    ? FileImage(imageList[1]) as ImageProvider
+                    : AssetImage(pathAsset),
+                fit: BoxFit.cover,
+              )),
+            ),
+          )),
+    );
+  }
+
+  Widget Image3() {
+    return Transform.scale(
+      scale: 1,
+      child: Card(
+          elevation: 6,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: GestureDetector(
+            onTap: _selectImageDialog,
+            child: Container(
+              height: 200,
+              width: 200,
+              decoration: BoxDecoration(
+                  image: DecorationImage(
+                image: imageList.length > 2
+                    ? FileImage(imageList[2]) as ImageProvider
+                    : AssetImage(pathAsset),
+                fit: BoxFit.cover,
+              )),
+            ),
+          )),
+    );
+  }
 }

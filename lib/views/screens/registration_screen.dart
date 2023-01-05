@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:homestayraya/views/screens/booking_screen.dart';
+import 'package:homestayraya/views/screens/catalogue_screen.dart';
 import 'package:http/http.dart' as http;
 import '../../config.dart';
 import '../../models/user.dart';
@@ -403,7 +403,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (content) => BookingScreen(
+                  builder: (content) => CatalogueScreen(
                         user: user,
                       )));
         } else {
