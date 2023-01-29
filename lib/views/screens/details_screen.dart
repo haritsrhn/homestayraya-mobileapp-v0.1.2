@@ -1,38 +1,29 @@
-// ignore_for_file: prefer_typing_uninitialized_variables
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
-import 'dart:io';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:image_cropper/image_cropper.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
-import '../../serverConfig.dart';
-import '../../models/user.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:homestayraya/serverConfig.dart';
 import 'package:http/http.dart' as http;
+import 'package:homestayraya/models/homestay.dart';
+import 'package:homestayraya/models/user.dart';
 import 'package:sn_progress_dialog/sn_progress_dialog.dart';
 
-class NewHomestayScreen extends StatefulWidget {
+class DetailsScreen extends StatefulWidget {
+  final Homestays homestays;
   final User user;
-  final Position position;
-  const NewHomestayScreen(
-      {super.key, required this.user, required this.position});
+  const DetailsScreen({
+    Key? key,
+    required this.homestays,
+    required this.user,
+  }) : super(key: key);
 
   @override
-  State<NewHomestayScreen> createState() => _NewHomestayScreenState();
+  State<DetailsScreen> createState() => _DetailsScreenState();
 }
 
-class _NewHomestayScreenState extends State<NewHomestayScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _getAddress();
-    _lat = widget.position.latitude.toString();
-    _lng = widget.position.longitude.toString();
-  }
-
-  File? _image;
-  List<File> imageList = [];
+class _DetailsScreenState extends State<DetailsScreen> {
+  List<Homestays> homestayList = <Homestays>[];
   var pathAsset = "assets/images/camera.png";
   final TextEditingController _hsnameEditingController =
           TextEditingController(),
@@ -42,14 +33,33 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
       _hslocalEditingController = TextEditingController(),
       _hsaddressEditingController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  var _lat, _lng;
   // ignore: unused_field
   int _index = 0;
+  late double screenHeight, screenWidth, resWidth;
+  int rowcount = 2;
+
+  @override
+  void initState() {
+    super.initState();
+    _hsnameEditingController.text = widget.homestays.hsName.toString();
+    _hsdescEditingController.text = widget.homestays.hsDesc.toString();
+    _hspriceEditingController.text = widget.homestays.hsPrice.toString();
+    _hsstateEditingController.text = widget.homestays.hsState.toString();
+    _hslocalEditingController.text = widget.homestays.hsLocal.toString();
+    _hsaddressEditingController.text = widget.homestays.hsAddress.toString();
+  }
 
   @override
   Widget build(BuildContext context) {
+    screenHeight = MediaQuery.of(context).size.height;
+    screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth <= 600) {
+      resWidth = screenWidth;
+    } else {
+      resWidth = screenWidth * 0.75;
+    }
     return Scaffold(
-      appBar: AppBar(title: const Text("Add New Homestay")),
+      appBar: AppBar(title: const Text("Details/Edit")),
       body: SingleChildScrollView(
           child: Column(children: [
         const SizedBox(
@@ -75,7 +85,7 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
         ),
         const SizedBox(height: 16),
         const Text(
-          "Add New Homestay",
+          "Update Homestay",
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w600,
@@ -157,6 +167,7 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
                                   val!.isEmpty || (val.length < 3)
                                       ? "Current States"
                                       : null,
+                              enabled: false,
                               controller: _hsstateEditingController,
                               keyboardType: TextInputType.text,
                               decoration: const InputDecoration(
@@ -170,6 +181,7 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
                           flex: 5,
                           child: TextFormField(
                               textInputAction: TextInputAction.next,
+                              enabled: false,
                               validator: (val) =>
                                   val!.isEmpty || (val.length < 3)
                                       ? "Current Locality"
@@ -188,9 +200,9 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
                   SizedBox(
                     width: 200,
                     child: ElevatedButton(
-                      child: const Text('Add Homestay'),
+                      child: const Text('Update Homestay'),
                       onPressed: () => {
-                        _newHomestayDialog(),
+                        _updateHomestayDialog(),
                       },
                     ),
                   ),
@@ -201,158 +213,54 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
     );
   }
 
-  void _newHomestayDialog() {
-    if (imageList.length < 2) {
-      Fluttertoast.showToast(
-          msg: "Please insert at least 3 pictures",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          fontSize: 14.0);
-      return;
-    }
+  _updateHomestayDialog() {
     if (!_formKey.currentState!.validate()) {
       Fluttertoast.showToast(
-          msg: "Please complete the form",
+          msg: "Please complete the form first",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 1,
           fontSize: 14.0);
       return;
     }
-    showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.all(Radius.circular(20.0))),
-            title: const Text("Add Homestay"),
-            content: const Text("Are you sure you want to add this homestay?"),
-            actions: <Widget>[
-              TextButton(
-                  onPressed: () async {
-                    Navigator.of(context).pop();
-                    _addHomestay();
-                  },
-                  child: const Text("Add")),
-              TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text("Cancel")),
-            ],
-          );
-        });
-  }
-
-  void _selectImageDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-// return object of type Dialog
         return AlertDialog(
-            title: const Text(
-              "Select from",
-              style: TextStyle(),
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(20.0))),
+          title: const Text(
+            "Update this Homestay?",
+            style: TextStyle(),
+          ),
+          content: const Text("Are you sure?", style: TextStyle()),
+          actions: <Widget>[
+            TextButton(
+              child: const Text(
+                "Yes",
+                style: TextStyle(),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+                _updateHomestay();
+              },
             ),
-            content: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                SizedBox(
-                  height: 100,
-                  child: Column(
-                    children: [
-                      IconButton(
-                          iconSize: 32,
-                          onPressed: _onCamera,
-                          icon: const Icon(Icons.camera_alt)),
-                      const Text("Camera"),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: 100,
-                  child: Column(
-                    children: [
-                      IconButton(
-                          iconSize: 32,
-                          onPressed: _onGallery,
-                          icon: const Icon(Icons.camera)),
-                      const Text("Gallery"),
-                    ],
-                  ),
-                ),
-              ],
-            ));
+            TextButton(
+              child: const Text(
+                "No",
+                style: TextStyle(),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
       },
     );
   }
 
-  Future<void> _onCamera() async {
-    Navigator.pop(context);
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.camera,
-      maxHeight: 800,
-      maxWidth: 800,
-    );
-    if (pickedFile != null) {
-      _image = File(pickedFile.path);
-      _cropImage();
-    }
-  }
-
-  Future<void> _onGallery() async {
-    Navigator.pop(context);
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxHeight: 800,
-      maxWidth: 800,
-    );
-    if (pickedFile != null) {
-      _image = File(pickedFile.path);
-      _cropImage();
-    }
-  }
-
-  Future<void> _cropImage() async {
-    CroppedFile? croppedFile = await ImageCropper().cropImage(
-      sourcePath: _image!.path,
-      aspectRatioPresets: [
-        CropAspectRatioPreset.square,
-      ],
-      uiSettings: [
-        AndroidUiSettings(
-            toolbarTitle: 'Crop Image',
-            toolbarColor: Colors.brown,
-            toolbarWidgetColor: Colors.white,
-            initAspectRatio: CropAspectRatioPreset.original,
-            lockAspectRatio: false),
-        IOSUiSettings(
-          title: 'Crop Image',
-        ),
-      ],
-    );
-    if (croppedFile != null) {
-      File imageFile = File(croppedFile.path);
-      _image = imageFile;
-      imageList.add(_image!);
-      setState(() {});
-    }
-  }
-
-  _getAddress() async {
-    List<Placemark> placemarks = await placemarkFromCoordinates(
-        widget.position.latitude, widget.position.longitude);
-    setState(() {
-      _hsstateEditingController.text =
-          placemarks[0].administrativeArea.toString();
-      _hslocalEditingController.text = placemarks[0].locality.toString();
-    });
-  }
-
-  void _addHomestay() {
+  void _updateHomestay() {
     ProgressDialog pd = ProgressDialog(context: context);
     pd.show(msg: 'Uploading..', max: 100);
 
@@ -360,26 +268,15 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
     String hsdesc = _hsdescEditingController.text.toString();
     String hsprice = _hspriceEditingController.text.toString();
     String hsaddress = _hsaddressEditingController.text.toString();
-    String hsstate = _hsstateEditingController.text.toString();
-    String hslocal = _hslocalEditingController.text.toString();
-    String base64Image1 = base64Encode(imageList[0].readAsBytesSync());
-    String base64Image2 = base64Encode(imageList[1].readAsBytesSync());
-    String base64Image3 = base64Encode(imageList[2].readAsBytesSync());
 
-    http.post(Uri.parse("${ServerConfig.server}/php/insert_homestay.php"),
+    http.post(Uri.parse("${ServerConfig.server}/php/update_homestay.php"),
         body: {
+          "hsid": widget.homestays.hsId,
           "userid": widget.user.id,
           "hsname": hsname,
           "hsdesc": hsdesc,
           "hsprice": hsprice,
           "hsaddress": hsaddress,
-          "state": hsstate,
-          "loc": hslocal,
-          "lat": _lat,
-          "lng": _lng,
-          "image1": base64Image1,
-          "image2": base64Image2,
-          "image3": base64Image3,
         }).then((response) {
       var data = jsonDecode(response.body);
       if (response.statusCode == 200 && data['status'] == "success") {
@@ -392,6 +289,7 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
         pd.update(value: 100, msg: "Completed");
         pd.close();
         Navigator.of(context).pop();
+        return;
       } else {
         Fluttertoast.showToast(
             msg: "Failed",
@@ -410,24 +308,21 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
     return Transform.scale(
       scale: 1,
       child: Card(
-          elevation: 6,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: GestureDetector(
-            onTap: _selectImageDialog,
-            child: Container(
-              height: 200,
-              width: 200,
-              decoration: BoxDecoration(
-                  image: DecorationImage(
-                // ignore: prefer_is_empty
-                image: imageList.length > 0
-                    ? FileImage(imageList[0]) as ImageProvider
-                    : AssetImage(pathAsset),
-                fit: BoxFit.cover,
-              )),
-            ),
-          )),
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: SizedBox(
+          height: 200,
+          width: 200,
+          child: CachedNetworkImage(
+            width: resWidth / 2,
+            fit: BoxFit.cover,
+            imageUrl:
+                "${ServerConfig.server}/assets/homestay_image/${widget.homestays.hsId}-1.png",
+            placeholder: (context, url) => const LinearProgressIndicator(),
+            errorWidget: (context, url, error) => const Icon(Icons.error),
+          ),
+        ),
+      ),
     );
   }
 
@@ -436,23 +331,21 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
     return Transform.scale(
       scale: 1,
       child: Card(
-          elevation: 6,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: GestureDetector(
-            onTap: _selectImageDialog,
-            child: Container(
-              height: 200,
-              width: 200,
-              decoration: BoxDecoration(
-                  image: DecorationImage(
-                image: imageList.length > 1
-                    ? FileImage(imageList[1]) as ImageProvider
-                    : AssetImage(pathAsset),
-                fit: BoxFit.cover,
-              )),
-            ),
-          )),
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: SizedBox(
+          height: 200,
+          width: 200,
+          child: CachedNetworkImage(
+            width: resWidth / 2,
+            fit: BoxFit.cover,
+            imageUrl:
+                "${ServerConfig.server}/assets/homestay_image/${widget.homestays.hsId}-2.png",
+            placeholder: (context, url) => const LinearProgressIndicator(),
+            errorWidget: (context, url, error) => const Icon(Icons.error),
+          ),
+        ),
+      ),
     );
   }
 
@@ -461,23 +354,21 @@ class _NewHomestayScreenState extends State<NewHomestayScreen> {
     return Transform.scale(
       scale: 1,
       child: Card(
-          elevation: 6,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: GestureDetector(
-            onTap: _selectImageDialog,
-            child: Container(
-              height: 200,
-              width: 200,
-              decoration: BoxDecoration(
-                  image: DecorationImage(
-                image: imageList.length > 2
-                    ? FileImage(imageList[2]) as ImageProvider
-                    : AssetImage(pathAsset),
-                fit: BoxFit.cover,
-              )),
-            ),
-          )),
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: SizedBox(
+          height: 200,
+          width: 200,
+          child: CachedNetworkImage(
+            width: resWidth / 2,
+            fit: BoxFit.cover,
+            imageUrl:
+                "${ServerConfig.server}/assets/homestay_image/${widget.homestays.hsId}-3.png",
+            placeholder: (context, url) => const LinearProgressIndicator(),
+            errorWidget: (context, url, error) => const Icon(Icons.error),
+          ),
+        ),
+      ),
     );
   }
 }

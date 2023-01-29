@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../models/user.dart';
+import '../../serverConfig.dart';
 import '../screens/home_screen.dart';
 import '../screens/catalogue_screen.dart';
 import '/views/screens/profile_screen.dart';
@@ -23,8 +25,14 @@ class _MainMenuWidgetState extends State<MainMenuWidget> {
           UserAccountsDrawerHeader(
             accountName: Text(widget.user.name.toString()),
             accountEmail: Text(widget.user.email.toString()),
-            currentAccountPicture: const CircleAvatar(
-              radius: 30.0,
+            currentAccountPicture: CachedNetworkImage(
+              imageUrl:
+                  "${ServerConfig.server}/assets/profile_image/${widget.user.id}.png",
+              placeholder: (context, url) => const LinearProgressIndicator(),
+              errorWidget: (context, url, error) => const Icon(
+                Icons.image_not_supported,
+                size: 128,
+              ),
             ),
           ),
           ListTile(

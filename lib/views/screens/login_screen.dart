@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../config.dart';
+import '../../serverConfig.dart';
 import 'catalogue_screen.dart';
 import 'home_screen.dart';
 import 'registration_screen.dart';
@@ -167,11 +167,10 @@ class _LoginScreenState extends State<LoginScreen> {
           fontSize: 14.0);
       return;
     }
-    String _email = _emailEditingController.text;
-    String _pass = _passEditingController.text;
-    http.post(Uri.parse("${Config.server}/php/login_user.php"),
-        body: {"email": _email, "password": _pass}).then((response) {
-      print(response.body);
+    String email = _emailEditingController.text;
+    String pass = _passEditingController.text;
+    http.post(Uri.parse("${ServerConfig.server}/php/login_user.php"),
+        body: {"email": email, "password": pass}).then((response) {
       if (response.statusCode == 200) {
         var jsonResponse = json.decode(response.body);
         User user = User.fromJson(jsonResponse['data']);
@@ -209,7 +208,8 @@ class _LoginScreenState extends State<LoginScreen> {
         phone: "0123456789",
         address: "NA",
         regdate: "0",
-        otp: "0");
+        otp: "0",
+        credit: "0");
     Navigator.push(
         context,
         MaterialPageRoute(

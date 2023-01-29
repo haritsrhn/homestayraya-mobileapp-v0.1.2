@@ -21,7 +21,8 @@ class _SplashScreenState extends State<SplashScreen> {
         phone: "0123456789",
         address: "NA",
         regdate: "0",
-        otp: "0");
+        otp: "0",
+        credit: "0");
     Timer(
         const Duration(seconds: 5),
         () => Navigator.pushReplacement(
@@ -51,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
               ),
               SizedBox(height: 50),
-              Text("Version 0.1.1", style: TextStyle(color: Colors.white))
+              Text("Version 0.1.2", style: TextStyle(color: Colors.white))
             ],
           ),
         ),

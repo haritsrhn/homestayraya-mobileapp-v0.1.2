@@ -39,6 +39,7 @@ class Homestays {
   }
 
   Map<String, dynamic> toJson() {
+    // ignore: prefer_collection_literals, unnecessary_new
     final Map<String, dynamic> data = new Map<String, dynamic>();
     data['hs_id'] = hsId;
     data['user_id'] = userId;

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:homestayraya/views/screens/catalogue_screen.dart';
 import 'package:http/http.dart' as http;
-import '../../config.dart';
+import '../../serverConfig.dart';
 import '../../models/user.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
@@ -232,7 +232,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         phone: "0123456789",
         address: "NA",
         regdate: "0",
-        otp: "0");
+        otp: "0",
+        credit: "0");
     Navigator.push(context,
         MaterialPageRoute(builder: (content) => HomeScreen(user: user)));
   }
@@ -252,11 +253,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   void _registerAccountDialog() {
-    String _name = _nameEditingController.text;
-    String _phone = _phoneEditingController.text;
-    String _email = _emailEditingController.text;
-    String _pass1 = _passEditingController.text;
-    String _pass2 = _pass2EditingController.text;
+    String name = _nameEditingController.text;
+    String phone = _phoneEditingController.text;
+    String email = _emailEditingController.text;
+    String pass1 = _passEditingController.text;
+    String pass2 = _pass2EditingController.text;
 
     if (!_formKey.currentState!.validate()) {
       Fluttertoast.showToast(
@@ -278,7 +279,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-    if (_pass1 != _pass2) {
+    if (pass1 != pass2) {
       Fluttertoast.showToast(
           msg: "Please check your password again",
           toastLength: Toast.LENGTH_SHORT,
@@ -307,7 +308,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               onPressed: () {
                 Navigator.of(context).pop();
-                _registerAccount(_name, _email, _phone, _pass1);
+                _registerAccount(name, email, phone, pass1);
               },
             ),
             TextButton(
@@ -328,7 +329,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   loadEula() async {
     WidgetsFlutterBinding.ensureInitialized();
     eula = await rootBundle.loadString('assets/eula.txt');
-    print(eula);
   }
 
   showEula() {
@@ -379,12 +379,13 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   void _registerAccount(String name, String email, String phone, String pass) {
     try {
-      http.post(Uri.parse("${Config.server}/php/register_user.php"), body: {
-        "name": name,
-        "email": email,
-        "phone": phone,
-        "password": pass,
-      }).then((response) {
+      http.post(Uri.parse("${ServerConfig.server}/php/register_user.php"),
+          body: {
+            "name": name,
+            "email": email,
+            "phone": phone,
+            "password": pass,
+          }).then((response) {
         if (response.statusCode == 200) {
           Fluttertoast.showToast(
               msg: "Registration Success",
@@ -399,7 +400,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               phone: "0123456789",
               address: "NA",
               regdate: "0",
-              otp: "0");
+              otp: "0",
+              credit: "0");
           Navigator.push(
               context,
               MaterialPageRoute(
@@ -417,8 +419,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         }
         //print(response.body);
       });
-    } catch (e) {
-      print(e.toString());
-    }
+      // ignore: empty_catches
+    } catch (e) {}
   }
 } //End of class

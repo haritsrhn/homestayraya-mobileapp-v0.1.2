@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:ndialog/ndialog.dart';
-import '../../config.dart';
+import '../../serverConfig.dart';
 import '../../models/user.dart';
 import '/views/screens/registration_screen.dart';
 import '/views/shared/main_menu_widget.dart';
+import 'details_screen.dart';
 import 'login_screen.dart';
 import 'newhomestay_screen.dart';
 import '../../models/homestay.dart';
@@ -57,13 +58,13 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
         appBar: AppBar(
           title: const Text('Catalogue'),
           actions: [
-            IconButton(
+            /*IconButton(
                 onPressed: _registrationForm,
                 icon: const Icon(Icons.app_registration)),
             IconButton(
               onPressed: _loginForm,
               icon: const Icon(Icons.login),
-            ),
+            ),*/
             PopupMenuButton(
               itemBuilder: (context) {
                 return [
@@ -80,9 +81,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
               onSelected: (value) {
                 if (value == 0) {
                   _goToNewHomestay();
-                } else if (value == 1) {
-                  print("My Order is selected");
-                }
+                } else if (value == 1) {}
               },
             ),
           ],
@@ -113,10 +112,10 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
                           elevation: 8,
                           child: InkWell(
                             onTap: () {
-                              // show details
+                              _showDetails(index);
                             },
                             onLongPress: () {
-                              // delete
+                              _deleteDialog(index);
                             },
                             child: Column(children: [
                               const SizedBox(
@@ -128,7 +127,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
                                   width: resWidth / 2,
                                   fit: BoxFit.cover,
                                   imageUrl:
-                                      "${Config.server}/assets/homestay_image/${homestayList[index].hsId}-1.png",
+                                      "${ServerConfig.server}/assets/homestay_image/${homestayList[index].hsId}-1.png",
                                   placeholder: (context, url) =>
                                       const LinearProgressIndicator(),
                                   errorWidget: (context, url, error) =>
@@ -256,7 +255,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
     http
         .get(
       Uri.parse(
-          "${Config.server}/php/load_homestay.php?userid=${widget.user.id}"),
+          "${ServerConfig.server}/php/load_homestay.php?userid=${widget.user.id}"),
     )
         .then((response) {
       if (response.statusCode == 200) {
@@ -289,5 +288,83 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
     } else {
       return str;
     }
+  }
+
+  Future<void> _showDetails(int index) async {
+    Homestays homestays = Homestays.fromJson(homestayList[index].toJson());
+
+    await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (content) => DetailsScreen(
+                  homestays: homestays,
+                  user: widget.user,
+                )));
+    _loadHomestay();
+  }
+
+  void _deleteDialog(int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(20.0))),
+          title: Text(
+            "Delete ${truncateString(homestayList[index].hsName.toString(), 15)}",
+          ),
+          content: const Text("Are you sure?"),
+          actions: <Widget>[
+            TextButton(
+              child: const Text(
+                "Yes",
+              ),
+              onPressed: () async {
+                Navigator.of(context).pop();
+                _deleteHomestay(index);
+              },
+            ),
+            TextButton(
+              child: const Text(
+                "No",
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteHomestay(index) {
+    try {
+      http.post(Uri.parse("${ServerConfig.server}/php/delete_homestay.php"),
+          body: {
+            "hs_id": homestayList[index].hsId,
+          }).then((response) {
+        var data = jsonDecode(response.body);
+        if (response.statusCode == 200 && data['status'] == "success") {
+          Fluttertoast.showToast(
+              msg: "Success",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              timeInSecForIosWeb: 1,
+              fontSize: 14.0);
+          _loadHomestay(); //refresh UI when the delete it's completed
+          return;
+        } else {
+          Fluttertoast.showToast(
+              msg: "Failed",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              timeInSecForIosWeb: 1,
+              fontSize: 14.0);
+          return;
+        }
+      });
+      // ignore: empty_catches
+    } catch (e) {}
   }
 } //end of class
